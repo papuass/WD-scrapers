@@ -71,7 +71,7 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
         if (parliamentaryGroup.getDateTo() != null) {
             sb.append(TAB + END + TAB).append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateTo()));
         }
-        sb.append(TAB + URL + TAB).append(textUtils.doubleQuote(member.getReferenceURI())).append(TAB).append(CHECKED_DATE).append(TAB).append(dateUtils.formatQuickStatementsDate(new Date()));
+        sb.append(TAB + URL + TAB).append(textUtils.doubleQuote(member.getReferenceURL())).append(TAB).append(CHECKED_DATE).append(TAB).append(dateUtils.formatQuickStatementsDate(new Date()));
         sb.append("\n");
         return sb.toString();
     }

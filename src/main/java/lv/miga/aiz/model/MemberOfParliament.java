@@ -9,7 +9,7 @@ public class MemberOfParliament {
     private String surname;
     private String fromNote;
     private String toNote;
-    private String referenceURI;
+    private String referenceURL;
     private List<ParliamentaryGroup> parliamentaryGroups;
 
     public String getQid() {
@@ -52,12 +52,12 @@ public class MemberOfParliament {
         this.toNote = toNote;
     }
 
-    public String getReferenceURI() {
-        return referenceURI;
+    public String getReferenceURL() {
+        return referenceURL;
     }
 
-    public void setReferenceURI(String referenceURI) {
-        this.referenceURI = referenceURI;
+    public void setReferenceURL(String referenceURL) {
+        this.referenceURL = referenceURL;
     }
 
     public List<ParliamentaryGroup> getParliamentaryGroups() {
@@ -76,7 +76,7 @@ public class MemberOfParliament {
                 ", surname='" + surname + '\'' +
                 ", fromNote='" + fromNote + '\'' +
                 ", toNote='" + toNote + '\'' +
-                ", referenceURI='" + referenceURI + '\'' +
+                ", referenceURL='" + referenceURL + '\'' +
                 ", parliamentaryGroups=" + parliamentaryGroups +
                 '}';
     }

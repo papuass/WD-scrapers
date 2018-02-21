@@ -18,6 +18,7 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -46,11 +47,9 @@ public class SaeimaScraperScript {
 
     private MemberOfParliament parseUrl(String qid, String url) {
         MemberOfParliament deputy = new MemberOfParliament();
+        deputy.setQid(qid);
+        deputy.setReferenceURL(url);
         try {
-
-            deputy.setQid(qid);
-            deputy.setReferenceURI(url);
-
             Document doc = Jsoup.connect(url).get();
 
             Elements mandates = doc.select("div.viewHolder");
@@ -96,7 +95,7 @@ public class SaeimaScraperScript {
     }
 
     private ParliamentaryGroup createOrFindMatchingGroup(Set<ParliamentaryGroup> groups, Date dateFrom, Date dateTo, String groupName) {
-        return groups.stream().filter(group -> group.getGroupName().equals(groupName) && (group.getDateTo().equals(dateFrom) || group.getDateFrom().equals(dateTo))).findFirst().orElseGet(() -> {
+        return groups.stream().filter(matchesExistingGroup(dateFrom, dateTo, groupName)).findFirst().orElseGet(() -> {
                     ParliamentaryGroup group = new ParliamentaryGroup();
                     group.setGroupName(groupName);
                     group.setDateFrom(dateFrom);
@@ -104,6 +103,10 @@ public class SaeimaScraperScript {
                     return group;
                 }
         );
+    }
+
+    private Predicate<ParliamentaryGroup> matchesExistingGroup(Date dateFrom, Date dateTo, String groupName) {
+        return group -> group.getGroupName().equals(groupName) && (group.getDateTo().equals(dateFrom) || group.getDateFrom().equals(dateTo));
     }
 
     private JsonNode getJsonNode(String jsoupText) throws IOException {
