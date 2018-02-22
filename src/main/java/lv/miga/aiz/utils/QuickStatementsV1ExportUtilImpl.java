@@ -5,7 +5,6 @@ import lv.miga.aiz.model.MemberOfParliament;
 import lv.miga.aiz.model.ParliamentaryGroup;
 
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +30,7 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
         map.put("Unity parliamentary group", "Q49636278");
         map.put("Union of Greens and Farmers parliamentary group", "Q49636011");
         map.put("Latvian Regional Alliance parliamentary group", "Q49637927");
-        map.put("Unaffiliated members of parliamentary", "Q49638041");
+        map.put("Unaffiliated members of parliament", "Q49638041");
         groupConfig = Collections.unmodifiableMap(map);
     }
 
@@ -46,7 +45,6 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
 
     @Override
     public void export(MemberOfParliament member) {
-
         StringBuilder sb = new StringBuilder();
 
         String qid;
@@ -71,8 +69,10 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
         if (parliamentaryGroup.getDateTo() != null) {
             sb.append(TAB + END + TAB).append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateTo()));
         }
-        sb.append(TAB + URL + TAB).append(textUtils.doubleQuote(member.getReferenceURL())).append(TAB).append(CHECKED_DATE).append(TAB).append(dateUtils.formatQuickStatementsDate(new Date()));
-        sb.append("\n");
+        sb.append(TAB + URL + TAB).append(textUtils.doubleQuote(member.getReferenceURL()))
+                // to allow multiple runs, let's not add checked date
+                // .append(TAB).append(CHECKED_DATE).append(TAB).append(dateUtils.formatQuickStatementsDate(new Date()))
+                .append("\n");
         return sb.toString();
     }
 

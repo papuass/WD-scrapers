@@ -7,6 +7,8 @@ public class MemberOfParliament {
     private String qid;
     private String name;
     private String surname;
+    private Integer parliament;
+    private String replacesDeputy;
     private String fromNote;
     private String toNote;
     private String referenceURL;
@@ -34,6 +36,22 @@ public class MemberOfParliament {
 
     public void setSurname(String surname) {
         this.surname = surname;
+    }
+
+    public Integer getParliament() {
+        return parliament;
+    }
+
+    public void setParliament(Integer parliament) {
+        this.parliament = parliament;
+    }
+
+    public String getReplacesDeputy() {
+        return replacesDeputy;
+    }
+
+    public void setReplacesDeputy(String replacesDeputy) {
+        this.replacesDeputy = replacesDeputy;
     }
 
     public String getFromNote() {
@@ -74,6 +92,8 @@ public class MemberOfParliament {
                 "qid='" + qid + '\'' +
                 ", name='" + name + '\'' +
                 ", surname='" + surname + '\'' +
+                ", parliament=" + parliament +
+                ", replacesDeputy='" + replacesDeputy + '\'' +
                 ", fromNote='" + fromNote + '\'' +
                 ", toNote='" + toNote + '\'' +
                 ", referenceURL='" + referenceURL + '\'' +
