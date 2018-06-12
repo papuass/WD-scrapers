@@ -4,8 +4,8 @@ apply plugin: 'eclipse'
 sourceCompatibility = 1.8
 version = '1.0'
 
-compileJava { 
-	options.encoding = "UTF-8" 
+compileJava {
+    options.encoding = "UTF-8"
 }
 
 repositories {
@@ -13,9 +13,14 @@ repositories {
 }
 
 dependencies {
-    compile 'org.jsoup:jsoup:1.11.2',
+    compile 'org.jsoup:jsoup:1.11.3',
             'com.fasterxml.jackson.core:jackson-core:2.9.4',
             'com.fasterxml.jackson.core:jackson-databind:2.9.4',
-            'com.google.inject:guice:4.1.0'
+            'com.google.inject:guice:4.2.0',
+            'org.wikidata.wdtk:wdtk-datamodel:0.8.0',
+            'org.wikidata.wdtk:wdtk-wikibaseapi:0.8.0',
+            'org.immutables:value:2.6.1',
+            'com.google.code.findbugs:jsr305:3.0.2'
+
     testCompile group: 'junit', name: 'junit', version: '4.+'
 }

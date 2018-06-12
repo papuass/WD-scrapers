@@ -14,13 +14,21 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
     private static final String POSITION = "P39";
     private static final String DEPUTY_OF_SAEIMA = "Q21191589";
     private static final String TERM = "P2937";
-    private static final String SAEIMA12 = "Q20557340";
     private static final String START = "P580";
     private static final String END = "P582";
     private static final String PARL_GROUP = "P4100";
     private static final String URL = "S854";
     private static final String CHECKED_DATE = "S813";
     private static final Map<String, String> groupConfig;
+    private static final Map<Integer, String> parliamentConfig;
+
+    static {
+        Map<Integer, String> map = new HashMap<>();
+        map.put(12, "Q20557340");
+        map.put(11, "Q13098708");
+        map.put(10, "Q16347625");
+        parliamentConfig = Collections.unmodifiableMap(map);
+    }
 
     static {
         Map<String, String> map = new HashMap<>();
@@ -64,8 +72,10 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
     private String processFraction(String qid, MemberOfParliament member, ParliamentaryGroup parliamentaryGroup) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(qid).append(TAB).append(POSITION).append(TAB).append(DEPUTY_OF_SAEIMA).append(TAB).append(TERM).append(TAB).append(SAEIMA12).append(TAB).append(PARL_GROUP).append(TAB)
-                .append(groupConfig.get(parliamentaryGroup.getGroupName())).append(TAB).append(START).append(TAB).append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateFrom()));
+        sb.append(qid).append(TAB).append(POSITION).append(TAB).append(DEPUTY_OF_SAEIMA).append(TAB).append(TERM).append(TAB)
+                .append(parliamentConfig.get(member.getParliament())).append(TAB).append(PARL_GROUP).append(TAB)
+                .append(groupConfig.get(parliamentaryGroup.getGroupName())).append(TAB).append(START).append(TAB)
+                .append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateFrom()));
         if (parliamentaryGroup.getDateTo() != null) {
             sb.append(TAB + END + TAB).append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateTo()));
         }

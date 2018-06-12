@@ -7,21 +7,24 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import lv.miga.aiz.guice.ScraperModule;
-import lv.miga.aiz.model.MemberOfParliament;
-import lv.miga.aiz.model.ParliamentaryGroup;
+import lv.miga.aiz.model.*;
 import lv.miga.aiz.utils.DateUtils;
 import lv.miga.aiz.utils.ExportUtil;
 import lv.miga.aiz.utils.TextUtils;
+import lv.miga.aiz.utils.WikibaseAPIExportUtilImpl;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SaeimaScraperScript {
 
@@ -35,46 +38,48 @@ public class SaeimaScraperScript {
     }
 
     public static void main(final String[] args) {
-        String url = args[0];
-        String qid = args.length > 1 ? args[1] : null;
+        String fileName = args[0];
 
         Injector injector = Guice.createInjector(new ScraperModule());
         SaeimaScraperScript script = injector.getInstance(SaeimaScraperScript.class);
 
-        MemberOfParliament deputy = script.parseUrl(qid, url);
-        System.out.println(deputy);
-        System.out.println();
-        injector.getInstance(ExportUtil.class).export(deputy);
+        try (Stream<String> lines = Files.lines(Paths.get(fileName))) {
+            lines.forEach(line -> {
+                String[] params = line.split(",");
+                MemberOfParliament deputy = script.parseUrl(params[0], params[1]);
+                System.out.println(deputy);
+                System.out.println();
+                injector.getInstance(ExportUtil.class).export(deputy);
+                new WikibaseAPIExportUtilImpl().export(deputy);
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private MemberOfParliament parseUrl(String qid, String url) {
-        MemberOfParliament deputy = new MemberOfParliament();
-        deputy.setQid(qid);
-        deputy.setReferenceURL(url);
+        ImmutableMemberOfParliament.Builder builder = ImmutableMemberOfParliament.builder().qid(qid).referenceURL(url);
         try {
             Document doc = Jsoup.connect(url).get();
 
-            deputy.setParliament(getParliament(doc));
+            builder = builder.parliament(getParliament(doc));
 
             Elements mandates = doc.select("div.viewHolder");
             if (!mandates.isEmpty()) {
-                deputy.setParliamentaryGroups(getDeputyParliamentaryGroups(mandates.get(0).html()));
+                builder = builder.parliamentaryGroups(getDeputyParliamentaryGroups(mandates.get(0).html()));
 
                 Optional<String> value = textUtils.extractValue(".*drawMand\\((.*)\\);.*", mandates.get(1).html());
                 if (value.isPresent()) {
                     JsonNode root = getJsonNode(value.get());
 
-                    deputy.setName(root.get("name").textValue());
-                    deputy.setSurname(root.get("sname").textValue());
-                    deputy.setFromNote(root.get("mrreason").textValue());
-                    deputy.setToNote(root.get("mfreason").textValue());
-                    deputy.setReplacesDeputy(parseReplacement(root.get("mrreason").textValue()));
+                    builder = builder.name(root.get("name").textValue()).surname(root.get("sname").textValue()).fromNote(root.get("mrreason").textValue()).toNote(root.get("mfreason").textValue()).replacesDeputy(parseReplacement(root.get("mrreason").textValue()));
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return deputy;
+
+        return builder.build();
     }
 
     private String parseReplacement(String value) {
@@ -106,23 +111,21 @@ public class SaeimaScraperScript {
                 Date dateTo = dateUtils.parseLatvianDate(root.get("dtT").textValue());
                 String groupName = root.get("str").textValue();
 
-                ParliamentaryGroup parliamentaryGroup = createOrFindMatchingGroup(groups, dateFrom, dateTo, groupName);
-                parliamentaryGroup.setDateFrom(dateUtils.min(dateFrom, parliamentaryGroup.getDateFrom()));
-                parliamentaryGroup.setDateTo(dateTo == null || parliamentaryGroup.getDateTo() == null ? null : dateUtils.max(dateTo, parliamentaryGroup.getDateTo()));
-                groups.add(parliamentaryGroup);
+                Optional<ParliamentaryGroup> parliamentaryGroup = createOrFindMatchingGroup(groups, dateFrom, dateTo, groupName);
+                if (parliamentaryGroup.isPresent()) {
+                    ParliamentaryGroup group = parliamentaryGroup.get();
+                    dateFrom = dateUtils.min(dateFrom, group.getDateFrom());
+                    dateTo = dateTo == null || group.getDateTo() == null ? null : dateUtils.max(dateTo, group.getDateTo());
+                    groups.remove(group);
+                }
+                groups.add(ImmutableParliamentaryGroup.builder().groupName(groupName).dateFrom(dateFrom).dateTo(dateTo).build());
             }
         };
     }
 
-    private ParliamentaryGroup createOrFindMatchingGroup(Set<ParliamentaryGroup> groups, Date dateFrom, Date dateTo, String groupName) {
-        return groups.stream().filter(matchesExistingGroup(dateFrom, dateTo, groupName)).findFirst().orElseGet(() -> {
-                    ParliamentaryGroup group = new ParliamentaryGroup();
-                    group.setGroupName(groupName);
-                    group.setDateFrom(dateFrom);
-                    group.setDateTo(dateTo);
-                    return group;
-                }
-        );
+
+    private Optional<ParliamentaryGroup> createOrFindMatchingGroup(Set<ParliamentaryGroup> groups, Date dateFrom, Date dateTo, String groupName) {
+        return groups.stream().filter(matchesExistingGroup(dateFrom, dateTo, groupName)).findFirst();
     }
 
     private Predicate<ParliamentaryGroup> matchesExistingGroup(Date dateFrom, Date dateTo, String groupName) {
