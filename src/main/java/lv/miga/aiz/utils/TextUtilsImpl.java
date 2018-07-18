@@ -10,11 +10,11 @@ public class TextUtilsImpl implements TextUtils {
 
     @Override
     public String doubleQuote(String text) {
-        return "\"" + text + "\"";
+        return String.format("\"%s\"", text);
     }
 
     @Override
-    public Optional<String> extractValue(String pattern, String text) {
+    public Optional<String> extractFirstValue(String pattern, String text) {
         return extractValues(pattern, text).stream().findFirst();
     }
 

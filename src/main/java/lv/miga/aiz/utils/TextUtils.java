@@ -12,7 +12,7 @@ public interface TextUtils {
      * @param text - text where to look for pattern
      * @return - returns matched text
      */
-    Optional<String> extractValue(String pattern, String text);
+    Optional<String> extractFirstValue(String pattern, String text);
 
     /**
      * @param pattern expects pattern with one matching group

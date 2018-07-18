@@ -7,9 +7,11 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import lv.miga.aiz.guice.ScraperModule;
-import lv.miga.aiz.model.*;
+import lv.miga.aiz.model.ImmutableMemberOfParliament;
+import lv.miga.aiz.model.ImmutableParliamentaryGroup;
+import lv.miga.aiz.model.MemberOfParliament;
+import lv.miga.aiz.model.ParliamentaryGroup;
 import lv.miga.aiz.utils.DateUtils;
-import lv.miga.aiz.utils.ExportUtil;
 import lv.miga.aiz.utils.TextUtils;
 import lv.miga.aiz.utils.WikibaseAPIExportUtilImpl;
 import org.jsoup.Jsoup;
@@ -49,7 +51,7 @@ public class SaeimaScraperScript {
                 MemberOfParliament deputy = script.parseUrl(params[0], params[1]);
                 System.out.println(deputy);
                 System.out.println();
-                injector.getInstance(ExportUtil.class).export(deputy);
+//                injector.getInstance(ExportUtil.class).export(deputy);
                 new WikibaseAPIExportUtilImpl().export(deputy);
             });
         } catch (IOException e) {
@@ -68,7 +70,7 @@ public class SaeimaScraperScript {
             if (!mandates.isEmpty()) {
                 builder = builder.parliamentaryGroups(getDeputyParliamentaryGroups(mandates.get(0).html()));
 
-                Optional<String> value = textUtils.extractValue(".*drawMand\\((.*)\\);.*", mandates.get(1).html());
+                Optional<String> value = textUtils.extractFirstValue(".*drawMand\\((.*)\\);.*", mandates.get(1).html());
                 if (value.isPresent()) {
                     JsonNode root = getJsonNode(value.get());
 
@@ -83,13 +85,13 @@ public class SaeimaScraperScript {
     }
 
     private String parseReplacement(String value) {
-        return textUtils.extractValue("Member of the Saeima replacing the former member of the Saeima (.*)", value).orElse(null);
+        return textUtils.extractFirstValue("Member of the Saeima replacing the former member of the Saeima (.*)", value).orElse(null);
     }
 
     private Integer getParliament(Document doc) {
         Elements title = doc.select("title");
         if (!title.isEmpty()) {
-            Optional<String> value = textUtils.extractValue(".*The (\\d*)th Saeima.*", title.text());
+            Optional<String> value = textUtils.extractFirstValue(".*The (\\d*)th Saeima.*", title.text());
             if (value.isPresent()) {
                 return Integer.parseInt(value.get());
             }
