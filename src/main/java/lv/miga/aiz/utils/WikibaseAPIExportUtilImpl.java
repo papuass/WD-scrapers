@@ -8,6 +8,7 @@ import org.wikidata.wdtk.datamodel.helpers.StatementBuilder;
 import org.wikidata.wdtk.datamodel.interfaces.*;
 import org.wikidata.wdtk.util.WebResourceFetcherImpl;
 import org.wikidata.wdtk.wikibaseapi.ApiConnection;
+import org.wikidata.wdtk.wikibaseapi.LoginFailedException;
 import org.wikidata.wdtk.wikibaseapi.WikibaseDataEditor;
 import org.wikidata.wdtk.wikibaseapi.WikibaseDataFetcher;
 import org.wikidata.wdtk.wikibaseapi.apierrors.MediaWikiApiErrorException;
@@ -46,6 +47,7 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
         Map<String, String> map = new HashMap<>();
         map.put("For Latvia from the Heart parliamentary group", "Q49638223");
         map.put("National Alliance \"All For Latvia!\" – \"For Fatherland and Freedom/LNNK\" parliamentary group", "Q49637732");
+        map.put("National Alliance of All for Latvia! and For Fatherland and Freedom/LNNK parliamentary group", "Q49637732");
         map.put("Concord parliamentary group", "Q49637655");
         map.put("Unity parliamentary group", "Q49636278");
         map.put("Union of Greens and Farmers parliamentary group", "Q49636011");
@@ -76,6 +78,7 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
                             Statement updatedStatement = updateStatement(member, existingStatement.get(), parliamentId, group);
                             statementsToAdd.add(updatedStatement);
                         } else {
+                            // TODO: check for problem when creating more than one statement
                             Statement newStatement = createNewStatement(member, parliamentId, group);
                             statementsToAdd.add(newStatement);
                         }
@@ -111,7 +114,7 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
     }
 
     private boolean notInUpdatableProperties(SnakGroup snaks) {
-        List<String> excludedProps = Arrays.asList(PROPERTY_DATE_TO, PROPERTY_DATE_TO, PROPERTY_PARL_TERM, PROPERTY_PARL_GROUP);
+        List<String> excludedProps = Arrays.asList(PROPERTY_DATE_TO, PROPERTY_DATE_FROM, PROPERTY_PARL_TERM, PROPERTY_PARL_GROUP);
         return !excludedProps.contains(snaks.getProperty().getId());
     }
 
@@ -119,7 +122,9 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
         Calendar c = Calendar.getInstance();
         c.setTime(dateFrom);
         return makeTimeValue(c.get(Calendar.YEAR), (byte) (c.get(Calendar.MONTH) + 1),
-                (byte) c.get(Calendar.DATE), TimeValue.CM_GREGORIAN_PRO);
+                (byte) c.get(Calendar.DATE), (byte) 0, (byte) 0, (byte) 0, TimeValue.PREC_DAY,
+                0, 0, 0,
+                TimeValue.CM_GREGORIAN_PRO);
     }
 
     private Statement createNewStatement(MemberOfParliament member, String parliamentId, ParliamentaryGroup group) {
@@ -193,11 +198,17 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
     private ApiConnection getWikidataConnection() {
         WebResourceFetcherImpl.setUserAgent(USER_AGENT);
         ApiConnection connection = ApiConnection.getWikidataApiConnection();
-//        try {
-//            connection.login("my username", "my password");
-//        } catch (LoginFailedException e) {
-//            e.printStackTrace();
-//        }
+        String username = System.getProperty("username");
+        String password = System.getProperty("password");
+        if (password == null || username == null) {
+            System.out.println("Run with -Dusername=<username> -Dpassword=<password>");
+        } else {
+            try {
+                connection.login(username, password);
+            } catch (LoginFailedException e) {
+                e.printStackTrace();
+            }
+        }
         return connection;
     }
 }

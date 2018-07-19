@@ -1,8 +1,6 @@
 package lv.miga.aiz;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -16,7 +14,6 @@ import lv.miga.aiz.utils.TextUtils;
 import lv.miga.aiz.utils.WikibaseAPIExportUtilImpl;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.parser.Parser;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
@@ -48,7 +45,7 @@ public class SaeimaScraperScript {
         try (Stream<String> lines = Files.lines(Paths.get(fileName))) {
             lines.forEach(line -> {
                 String[] params = line.split(",");
-                MemberOfParliament deputy = script.parseUrl(params[0], params[1]);
+                MemberOfParliament deputy = script.parseUrl(params[0], params[2]);
                 System.out.println(deputy);
                 System.out.println();
 //                injector.getInstance(ExportUtil.class).export(deputy);
@@ -72,7 +69,7 @@ public class SaeimaScraperScript {
 
                 Optional<String> value = textUtils.extractFirstValue(".*drawMand\\((.*)\\);.*", mandates.get(1).html());
                 if (value.isPresent()) {
-                    JsonNode root = getJsonNode(value.get());
+                    JsonNode root = textUtils.getJsonNode(value.get());
 
                     builder = builder.name(root.get("name").textValue()).surname(root.get("sname").textValue()).fromNote(root.get("mrreason").textValue()).toNote(root.get("mfreason").textValue()).replacesDeputy(parseReplacement(root.get("mrreason").textValue()));
                 }
@@ -107,7 +104,7 @@ public class SaeimaScraperScript {
 
     private Consumer<String> processParliamentaryGroupEntry(Set<ParliamentaryGroup> groups) {
         return value -> {
-            JsonNode root = getJsonNode(value);
+            JsonNode root = textUtils.getJsonNode(value);
             if (root != null) {
                 Date dateFrom = dateUtils.parseLatvianDate(root.get("dtF").textValue());
                 Date dateTo = dateUtils.parseLatvianDate(root.get("dtT").textValue());
@@ -132,18 +129,6 @@ public class SaeimaScraperScript {
 
     private Predicate<ParliamentaryGroup> matchesExistingGroup(Date dateFrom, Date dateTo, String groupName) {
         return group -> group.getGroupName().equals(groupName) && (group.getDateTo().equals(dateFrom) || group.getDateFrom().equals(dateTo));
-    }
-
-    private JsonNode getJsonNode(String jsoupText) {
-        String json = Parser.unescapeEntities(jsoupText, true);
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-        try {
-            return mapper.readTree(json);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
     }
 
 }

@@ -1,5 +1,11 @@
 package lv.miga.aiz.utils;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.jsoup.parser.Parser;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,4 +34,18 @@ public class TextUtilsImpl implements TextUtils {
         }
         return values;
     }
+
+    @Override
+    public JsonNode getJsonNode(String text) {
+        String json = Parser.unescapeEntities(text, true);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+        try {
+            return mapper.readTree(json);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 }
