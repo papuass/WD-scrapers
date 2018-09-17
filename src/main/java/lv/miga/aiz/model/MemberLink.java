@@ -10,6 +10,8 @@ public interface MemberLink {
     @Nullable
     String getQid();
 
+    int getParliamentaryTerm();
+
     String getName();
 
     String getSurname();

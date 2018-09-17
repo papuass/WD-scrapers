@@ -1,4 +1,4 @@
-package lv.miga.aiz.utils;
+package lv.miga.aiz.export;
 
 import lv.miga.aiz.model.MemberOfParliament;
 

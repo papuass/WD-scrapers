@@ -1,12 +1,11 @@
-package lv.miga.aiz.utils;
+package lv.miga.aiz.export;
 
 import com.google.inject.Inject;
+import lv.miga.aiz.config.WikidataMappings;
 import lv.miga.aiz.model.MemberOfParliament;
 import lv.miga.aiz.model.ParliamentaryGroup;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import lv.miga.aiz.utils.DateUtils;
+import lv.miga.aiz.utils.TextUtils;
 
 public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
 
@@ -19,28 +18,6 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
     private static final String PARL_GROUP = "P4100";
     private static final String URL = "S854";
     private static final String CHECKED_DATE = "S813";
-    private static final Map<String, String> groupConfig;
-    private static final Map<Integer, String> parliamentConfig;
-
-    static {
-        Map<Integer, String> map = new HashMap<>();
-        map.put(12, "Q20557340");
-        map.put(11, "Q13098708");
-        map.put(10, "Q16347625");
-        parliamentConfig = Collections.unmodifiableMap(map);
-    }
-
-    static {
-        Map<String, String> map = new HashMap<>();
-        map.put("For Latvia from the Heart parliamentary group", "Q49638223");
-        map.put("National Alliance \"All For Latvia!\" – \"For Fatherland and Freedom/LNNK\" parliamentary group", "Q49637732");
-        map.put("Concord parliamentary group", "Q49637655");
-        map.put("Unity parliamentary group", "Q49636278");
-        map.put("Union of Greens and Farmers parliamentary group", "Q49636011");
-        map.put("Latvian Regional Alliance parliamentary group", "Q49637927");
-        map.put("Unaffiliated members of parliament", "Q49638041");
-        groupConfig = Collections.unmodifiableMap(map);
-    }
 
     private DateUtils dateUtils;
     private TextUtils textUtils;
@@ -73,8 +50,8 @@ public class QuickStatementsV1ExportUtilImpl implements ExportUtil {
         StringBuilder sb = new StringBuilder();
 
         sb.append(qid).append(TAB).append(POSITION).append(TAB).append(DEPUTY_OF_SAEIMA).append(TAB).append(TERM).append(TAB)
-                .append(parliamentConfig.get(member.getParliament())).append(TAB).append(PARL_GROUP).append(TAB)
-                .append(groupConfig.get(parliamentaryGroup.getGroupName())).append(TAB).append(START).append(TAB)
+                .append(WikidataMappings.parliaments.get(member.getParliament())).append(TAB).append(PARL_GROUP).append(TAB)
+                .append(WikidataMappings.groups.get(parliamentaryGroup.getGroupName())).append(TAB).append(START).append(TAB)
                 .append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateFrom()));
         if (parliamentaryGroup.getDateTo() != null) {
             sb.append(TAB + END + TAB).append(dateUtils.formatQuickStatementsDate(parliamentaryGroup.getDateTo()));

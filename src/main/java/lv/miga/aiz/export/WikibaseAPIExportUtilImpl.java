@@ -1,8 +1,12 @@
-package lv.miga.aiz.utils;
+package lv.miga.aiz.export;
 
+import lv.miga.aiz.config.WikidataMappings;
 import lv.miga.aiz.model.MemberOfParliament;
 import lv.miga.aiz.model.ParliamentaryGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.wikidata.wdtk.datamodel.helpers.Datamodel;
+import org.wikidata.wdtk.datamodel.helpers.ItemDocumentBuilder;
 import org.wikidata.wdtk.datamodel.helpers.ReferenceBuilder;
 import org.wikidata.wdtk.datamodel.helpers.StatementBuilder;
 import org.wikidata.wdtk.datamodel.interfaces.*;
@@ -22,40 +26,30 @@ import static org.wikidata.wdtk.datamodel.helpers.Datamodel.*;
 public class WikibaseAPIExportUtilImpl implements ExportUtil {
 
     private static final String USER_AGENT = "Saeima bot 0.0.1; Wikidata Toolkit; Java";
-    private static final Map<Integer, String> parliamentConfig;
-    private static final Map<String, String> groupConfig;
-    public static final String ITEM_MEMBER_OF_PERLIAMENT = "Q21191589";
-    public static final String ITEM_SAEIMA = "Q822919";
-    public static final String PROPERTY_DATE_FROM = "P580";
-    public static final String PROPERTY_DATE_TO = "P582";
-    public static final String PROPERTY_PARL_GROUP = "P4100";
-    public static final String PROPERTY_PARL_TERM = "P2937";
-    public static final String PROPERTY_POSITION = "P39";
-    public static final String PROPERTY_REFERENCE_URL = "P854";
-    public static final String PROPERTY_RETRIEVED = "P813";
-    public static final String PROPERTY_PUBLISHER = "P123";
 
-    static {
-        Map<Integer, String> map = new HashMap<>();
-        map.put(12, "Q20557340");
-        map.put(11, "Q13098708");
-        map.put(10, "Q16347625");
-        parliamentConfig = Collections.unmodifiableMap(map);
-    }
+    private static final String ITEM_SANDBOX = "Q4115189";
+    private static final String PROPERTY_BIRTH_YEAR = "P569";
+    private static final String PROPERTY_CITIZENSHIP = "P27";
+    private static final String PROPERTY_INSTANCE_OF = "P31";
+    private static final String PROPERTY_DATE_FROM = "P580";
+    private static final String PROPERTY_DATE_TO = "P582";
+    private static final String PROPERTY_PARL_GROUP = "P4100";
+    private static final String PROPERTY_PARL_TERM = "P2937";
+    private static final String PROPERTY_POSITION = "P39";
+    private static final String PROPERTY_REFERENCE_URL = "P854";
+    private static final String PROPERTY_RETRIEVED = "P813";
+    private static final String PROPERTY_PUBLISHER = "P123";
+    private static final String PROPERTY_LANGUAGES = "P1412";
+    private static final String PROPERTY_OCCUPATION = "P106";
 
-    static {
-        Map<String, String> map = new HashMap<>();
-        map.put("For Latvia from the Heart parliamentary group", "Q49638223");
-        map.put("National Alliance \"All For Latvia!\" – \"For Fatherland and Freedom/LNNK\" parliamentary group", "Q49637732");
-        map.put("National Alliance of All for Latvia! and For Fatherland and Freedom/LNNK parliamentary group", "Q49637732");
-        map.put("Concord parliamentary group", "Q49637655");
-        map.put("Unity parliamentary group", "Q49636278");
-        map.put("Union of Greens and Farmers parliamentary group", "Q49636011");
-        map.put("Latvian Regional Alliance parliamentary group", "Q49637927");
-        map.put("Unaffiliated members of parliament", "Q49638041");
-        groupConfig = Collections.unmodifiableMap(map);
-    }
+    private static final String ITEM_MEMBER_OF_PERLIAMENT = "Q21191589";
+    private static final String ITEM_SAEIMA = "Q822919";
+    private static final String ITEM_HUMAN = "Q5";
+    private static final String ITEM_LATVIA = "Q211";
+    private static final String ITEM_LATVIAN_LANGUAGE = "Q9078";
+    private static final String ITEM_POLITICIAN = "Q82955";
 
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
     public void export(MemberOfParliament member) {
@@ -65,36 +59,61 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
         dataFetcher.getFilter().excludeAllLanguages();
         dataFetcher.getFilter().excludeAllSiteLinks();
 
+        String parliamentId = WikidataMappings.parliaments.get(member.getParliament());
+        WikibaseDataEditor wbde = new WikibaseDataEditor(connection, Datamodel.SITE_WIKIDATA);
         try {
-            ItemDocument item = (ItemDocument) dataFetcher.getEntityDocument(member.getQid());
-//            ItemDocument item = (ItemDocument) dataFetcher.getEntityDocument("Q4115189"); // sandbox
-            System.out.println("Label: = " + item.findLabel("lv"));
+            if (member.getQid() == null) {
+                ItemDocumentBuilder itemDocumentBuilder = ItemDocumentBuilder.forItemId(ItemIdValue.NULL)
+                        .withLabel(formatName(member), "lv")
+                        .withLabel(formatName(member), "en")
+                        .withLabel(formatName(member), "de")
+                        .withLabel(formatName(member), "fr")
+                        .withStatement(StatementBuilder.forSubjectAndProperty(ItemIdValue.NULL, makeWikidataPropertyIdValue(PROPERTY_INSTANCE_OF)).withValue(makeWikidataItemIdValue(ITEM_HUMAN)).build())
+                        .withStatement(StatementBuilder.forSubjectAndProperty(ItemIdValue.NULL, makeWikidataPropertyIdValue(PROPERTY_CITIZENSHIP)).withValue(makeWikidataItemIdValue(ITEM_LATVIA)).build())
+                        .withStatement(StatementBuilder.forSubjectAndProperty(ItemIdValue.NULL, makeWikidataPropertyIdValue(PROPERTY_LANGUAGES)).withValue(makeWikidataItemIdValue(ITEM_LATVIAN_LANGUAGE)).build())
+                        .withStatement(StatementBuilder.forSubjectAndProperty(ItemIdValue.NULL, makeWikidataPropertyIdValue(PROPERTY_OCCUPATION)).withValue(makeWikidataItemIdValue(ITEM_POLITICIAN)).build())
+                        .withStatement(StatementBuilder.forSubjectAndProperty(ItemIdValue.NULL, makeWikidataPropertyIdValue(PROPERTY_BIRTH_YEAR)).withValue(
+                                makeTimeValue(member.getBirthYear(), (byte) 0, (byte) 0, (byte) 0, (byte) 0, (byte) 0, TimeValue.PREC_YEAR, 0, 0, 0, TimeValue.CM_GREGORIAN_PRO)
+                        ).withReference(createReference(member.getReferenceURL())).build());
 
-            List<Statement> statementsToAdd = new ArrayList<>();
-            String parliamentId = parliamentConfig.get(member.getParliament());
-            member.getParliamentaryGroups().forEach(group -> {
-                        Optional<Statement> existingStatement = findParliamentStatementWithQualifiers(item, parliamentId, group);
-                        if (existingStatement.isPresent()) {
-                            Statement updatedStatement = updateStatement(member, existingStatement.get(), parliamentId, group);
-                            statementsToAdd.add(updatedStatement);
-                        } else {
-                            // TODO: check for problem when creating more than one statement
-                            Statement newStatement = createNewStatement(member, parliamentId, group);
-                            statementsToAdd.add(newStatement);
+                member.getParliamentaryGroups().forEach(group -> {
+                    itemDocumentBuilder.withStatement(createNewStatement(member, parliamentId, group));
+                });
+
+                wbde.createItemDocument(itemDocumentBuilder.build(), "Creating new item for parliament member");
+            } else {
+                ItemDocument item = (ItemDocument) dataFetcher.getEntityDocument(member.getQid());
+//                item = (ItemDocument) dataFetcher.getEntityDocument(ITEM_SANDBOX);
+
+                List<Statement> statementsToAdd = new ArrayList<>();
+
+                member.getParliamentaryGroups().forEach(group -> {
+                            Optional<Statement> existingStatement = findParliamentStatementWithQualifiers(item, parliamentId, group);
+                            if (existingStatement.isPresent()) {
+                                Statement updatedStatement = updateStatement(member, existingStatement.get(), parliamentId, group);
+                                statementsToAdd.add(updatedStatement);
+                            } else {
+                                // TODO: check for problem when creating more than one statement
+                                Statement newStatement = createNewStatement(member, parliamentId, group);
+                                statementsToAdd.add(newStatement);
+                            }
                         }
-                    }
-            );
-
-            WikibaseDataEditor wbde = new WikibaseDataEditor(connection, Datamodel.SITE_WIKIDATA);
-//            wbde.editItemDocument(item, false, "update nothing");
-            wbde.updateStatements(item, statementsToAdd, Collections.emptyList(), "Updating parliament membership data");
+                );
+                wbde.updateStatements(item, statementsToAdd, Collections.emptyList(), "Updating parliament membership data");
+            }
         } catch (MediaWikiApiErrorException | IOException e) {
+            logger.error("Error while exporting data", e);
             e.printStackTrace();
         }
     }
 
+    private String formatName(MemberOfParliament member) {
+        return member.getName() + " " + member.getSurname();
+    }
+
     private Statement updateStatement(MemberOfParliament member, Statement existingStatement, String parliamentId, ParliamentaryGroup group) {
-        Reference reference = createReference(member);
+        Reference reference = createReference(member.getReferenceURL());
+        // TODO do not update data if only refernce date is changed
         StatementBuilder statementBuilder = StatementBuilder.forSubjectAndProperty(makeWikidataItemIdValue(member.getQid()),
                 makeWikidataPropertyIdValue(PROPERTY_POSITION))
                 .withId(existingStatement.getStatementId())
@@ -103,9 +122,8 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
                 .withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_PARL_TERM),
                         makeWikidataItemIdValue(parliamentId))
                 .withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_PARL_GROUP),
-                        makeWikidataItemIdValue(groupConfig.get(group.getGroupName())))
+                        makeWikidataItemIdValue(WikidataMappings.groups.get(group.getGroupName())))
                 .withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_DATE_FROM), convertFromDate(group.getDateFrom()))
-
                 .withReference(reference);
         if (group.getDateTo() != null) {
             statementBuilder.withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_DATE_TO), convertFromDate(group.getDateTo()));
@@ -118,9 +136,9 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
         return !excludedProps.contains(snaks.getProperty().getId());
     }
 
-    private Value convertFromDate(Date dateFrom) {
+    private Value convertFromDate(Date date) {
         Calendar c = Calendar.getInstance();
-        c.setTime(dateFrom);
+        c.setTime(date);
         return makeTimeValue(c.get(Calendar.YEAR), (byte) (c.get(Calendar.MONTH) + 1),
                 (byte) c.get(Calendar.DATE), (byte) 0, (byte) 0, (byte) 0, TimeValue.PREC_DAY,
                 0, 0, 0,
@@ -128,15 +146,16 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
     }
 
     private Statement createNewStatement(MemberOfParliament member, String parliamentId, ParliamentaryGroup group) {
-        Reference reference = createReference(member);
+        Reference reference = createReference(member.getReferenceURL());
 
-        StatementBuilder statementBuilder = StatementBuilder.forSubjectAndProperty(makeWikidataItemIdValue(member.getQid()),
+        ItemIdValue itemIdValue = member.getQid() == null ? ItemIdValue.NULL : makeWikidataItemIdValue(member.getQid());
+        StatementBuilder statementBuilder = StatementBuilder.forSubjectAndProperty(itemIdValue,
                 makeWikidataPropertyIdValue(PROPERTY_POSITION))
                 .withValue(makeWikidataItemIdValue(ITEM_MEMBER_OF_PERLIAMENT))
                 .withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_PARL_TERM),
                         makeWikidataItemIdValue(parliamentId))
                 .withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_PARL_GROUP),
-                        makeWikidataItemIdValue(groupConfig.get(group.getGroupName())))
+                        makeWikidataItemIdValue(WikidataMappings.groups.get(group.getGroupName())))
                 .withQualifierValue(makeWikidataPropertyIdValue(PROPERTY_DATE_FROM), convertFromDate(group.getDateFrom()))
                 .withReference(reference);
 
@@ -146,9 +165,9 @@ public class WikibaseAPIExportUtilImpl implements ExportUtil {
         return statementBuilder.build();
     }
 
-    private Reference createReference(MemberOfParliament member) {
+    private Reference createReference(String referenceURL) {
         return ReferenceBuilder.newInstance()
-                .withPropertyValue(makeWikidataPropertyIdValue(PROPERTY_REFERENCE_URL), makeStringValue(member.getReferenceURL()))
+                .withPropertyValue(makeWikidataPropertyIdValue(PROPERTY_REFERENCE_URL), makeStringValue(referenceURL))
                 .withPropertyValue(makeWikidataPropertyIdValue(PROPERTY_RETRIEVED), convertFromDate(new Date()))
                 .withPropertyValue(makeWikidataPropertyIdValue(PROPERTY_PUBLISHER), makeWikidataItemIdValue(ITEM_SAEIMA))
                 .build();

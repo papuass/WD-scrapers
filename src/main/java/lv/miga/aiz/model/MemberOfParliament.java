@@ -28,4 +28,5 @@ public interface MemberOfParliament {
 
     List<ParliamentaryGroup> getParliamentaryGroups();
 
+    Long getBirthYear();
 }

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import lv.miga.aiz.config.WikidataMappings;
+import lv.miga.aiz.export.WikibaseAPIExportUtilImpl;
 import lv.miga.aiz.guice.ScraperModule;
 import lv.miga.aiz.model.ImmutableMemberOfParliament;
 import lv.miga.aiz.model.ImmutableParliamentaryGroup;
@@ -11,10 +13,11 @@ import lv.miga.aiz.model.MemberOfParliament;
 import lv.miga.aiz.model.ParliamentaryGroup;
 import lv.miga.aiz.utils.DateUtils;
 import lv.miga.aiz.utils.TextUtils;
-import lv.miga.aiz.utils.WikibaseAPIExportUtilImpl;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,6 +29,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class SaeimaScraperScript {
+
+    static Logger logger = LoggerFactory.getLogger(SaeimaScraperScript.class);
 
     private DateUtils dateUtils;
     private TextUtils textUtils;
@@ -46,9 +51,7 @@ public class SaeimaScraperScript {
             lines.forEach(line -> {
                 String[] params = line.split(",");
                 MemberOfParliament deputy = script.parseUrl(params[0], params[2]);
-                System.out.println(deputy);
-                System.out.println();
-//                injector.getInstance(ExportUtil.class).export(deputy);
+                logger.info("Exporting {}", deputy);
                 new WikibaseAPIExportUtilImpl().export(deputy);
             });
         } catch (IOException e) {
@@ -57,7 +60,7 @@ public class SaeimaScraperScript {
     }
 
     private MemberOfParliament parseUrl(String qid, String url) {
-        ImmutableMemberOfParliament.Builder builder = ImmutableMemberOfParliament.builder().qid(qid).referenceURL(url);
+        ImmutableMemberOfParliament.Builder builder = ImmutableMemberOfParliament.builder().qid(parseQidValue(qid)).referenceURL(url);
         try {
             Document doc = Jsoup.connect(url).get();
 
@@ -71,14 +74,28 @@ public class SaeimaScraperScript {
                 if (value.isPresent()) {
                     JsonNode root = textUtils.getJsonNode(value.get());
 
-                    builder = builder.name(root.get("name").textValue()).surname(root.get("sname").textValue()).fromNote(root.get("mrreason").textValue()).toNote(root.get("mfreason").textValue()).replacesDeputy(parseReplacement(root.get("mrreason").textValue()));
+                    builder = builder.name(root.get("name").textValue())
+                            .surname(root.get("sname").textValue())
+                            .fromNote(root.get("mrreason").textValue())
+                            .toNote(root.get("mfreason").textValue())
+                            .replacesDeputy(parseReplacement(root.get("mrreason").textValue()));
                 }
             }
+            builder.birthYear(parseBirthYear(doc));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         return builder.build();
+    }
+
+    private Long parseBirthYear(Document doc) {
+        String text = doc.select("table.wholeForm tr td").get(1).select("span").get(1).text();
+        return Long.parseLong(text);
+    }
+
+    private String parseQidValue(String qid) {
+        return "".equals(qid) ? null : qid;
     }
 
     private String parseReplacement(String value) {
@@ -128,7 +145,12 @@ public class SaeimaScraperScript {
     }
 
     private Predicate<ParliamentaryGroup> matchesExistingGroup(Date dateFrom, Date dateTo, String groupName) {
-        return group -> group.getGroupName().equals(groupName) && (group.getDateTo().equals(dateFrom) || group.getDateFrom().equals(dateTo));
+        return group ->
+        {
+            String existingGroup = WikidataMappings.groups.get(group.getGroupName());
+            return existingGroup.equals(WikidataMappings.groups.get(groupName))
+                    && (group.getDateTo().equals(dateFrom) || group.getDateFrom().equals(dateTo));
+        };
     }
 
 }
